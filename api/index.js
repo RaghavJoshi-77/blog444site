@@ -11,7 +11,8 @@ const app = express()
 const cookieParser = require("cookie-parser")
 const multer = require('multer')
 const uploadMiddleware = multer({dest:'uploads/'})
-const fs = require ('fs')
+const fs = require ('fs');
+const { info } = require("console");
 
 const salt = bcrypt.genSaltSync(11)
 const secret = 'awesojme rand string'
@@ -124,6 +125,50 @@ app.post('/post' , uploadMiddleware.single('file'),async(req,res) => {
     res.json(postDoc)
 })
 })
+
+//to update our post
+app.put('/post' , uploadMiddleware.single('file'),async (req,res) => {
+    let newpath = null;
+    if (req.file) {
+        const {originalname,path} = req.file;
+        const parts = originalname.split('.');
+        const ext = parts[parts.length - 1];
+        newpath = path+'.'+ext;
+        fs.renameSync(path, newpath);
+    
+    }
+
+    const {token} = req.cookies;
+    jwt.verify(token,secret,{},async(err,info) =>{
+        if(err) throw err
+        const {id,title,summary,content} = req.body
+        const postDoc = await Post.findById(id)
+        const isAuthor = JSON.stringify(postDoc.author) === JSON.stringify(info.id)
+        if (!isAuthor) {
+            return res.status(400).json('you are not the author')
+
+        }
+        // await postDoc.findOneAndUpdate({
+        //     title,
+        //     summary,
+        //     content,
+        //     cover: newpath ? newpath: postDoc.cover
+        // })
+        const updatePostDoc = await Post.findOneAndUpdate(
+            {_id: id},
+            {
+                title,
+                summary,
+                content,
+                cover:newpath ? newpath : postDoc.cover
+            },
+            {new: true}
+        )
+        res.json(updatePostDoc)
+    })   
+
+})
+
 
 //to show our new created article
 app.get('/post', async (req,res)=>{
