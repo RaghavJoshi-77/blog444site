@@ -76,16 +76,18 @@ app.post("/login",async (req,res)=>{
     }
 })
 //to make protected routes we need to make sure he is logged in so we use cookie to make routes protected install cookie parser for that
-app.get("/profile",(req,res)=>{
-    const {token} = req.cookies;
-    jwt.verify(token, secret , {}, (err,info)=>{
-        if(err){
-            throw err
+app.get("/profile", (req, res) => {
+    const { token } = req.cookies;
+    if (!token) {
+        return res.status(401).json({ error: "No token provided" });
+    }
+    jwt.verify(token, secret, {}, (err, info) => {
+        if (err) {
+            return res.status(401).json({ error: "Invalid token" });
         }
-        else res.json(info)
-    })
-    
-})
+        res.json(info);
+    });
+});
 //now when we did this in network tab it returned username , is , iat(=>id created at)
 
 //now creating the logout functionality
